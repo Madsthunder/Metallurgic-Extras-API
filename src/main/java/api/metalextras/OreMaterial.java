@@ -200,7 +200,7 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 		@Override
 		public int getDropXP(Random random)
 		{
-			return MathHelper.getRandomIntegerInRange(random, this.xpMin, this.xpMax);
+			return MathHelper.getInt(random, this.xpMin, this.xpMax);
 		}
 		
 		public OreMaterial.Impl setIngot(Item item, int minXP, int maxXP)

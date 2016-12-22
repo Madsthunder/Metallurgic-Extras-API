@@ -139,7 +139,7 @@ public class BlockOre extends BlockFalling
 	}
 	
 	@Override
-	public void func_190948_a(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced)
+	public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced)
 	{
 		tooltip.add((this.getOreType(stack.getMetadata()).getState().getBlock().getLocalizedName()));
 	}
