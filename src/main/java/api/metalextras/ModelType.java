@@ -1,7 +1,5 @@
 package api.metalextras;
 
-import net.minecraftforge.common.util.EnumHelper;
-
 public class ModelType
 {
 	public static final ModelType IRON = new ModelType();
