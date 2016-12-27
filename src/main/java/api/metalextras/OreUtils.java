@@ -3,10 +3,10 @@ package api.metalextras;
 import java.util.List;
 import java.util.Random;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;
 
 import net.minecraft.block.state.IBlockState;
@@ -27,8 +27,8 @@ public class OreUtils
 {
 	public static final ResourceLocation ORETYPE_TO_IBLOCKSTATE = new ResourceLocation("metalextras", "oretype_to_iblockstate");
 	public static final ResourceLocation ORETYPE_TO_ID = new ResourceLocation("metalextras", "oretype_to_id");
+	private static BiMap<OreType, IBlockState> ORETYPE_TO_IBLOCKSTATE_MAP;
 	private static ObjectIntIdentityMap<OreType> ORETYPE_TO_ID_MAP;
-	private static OreType[] ORETYPE_TO_IBLOCKSTATE_ARRAY;
 	private static IForgeRegistry<OreMaterial> materials;
 	private static IForgeRegistry<OreTypes> typeCollections;
 	
@@ -62,10 +62,8 @@ public class OreUtils
 	}
 	
 	@Nullable
-	public static OreType findOreType(@Nonnull ResourceLocation location)
+	public static OreType findOreType(ResourceLocation location)
 	{
-		if(location == null)
-			throw new IllegalStateException("Parameter 'location' Cannot be Null");
 		for(OreTypes types : getTypeCollectionsRegistry())
 			for(OreType type : types)
 				if(location.equals(type.getRegistryName()))
@@ -75,17 +73,18 @@ public class OreUtils
 	
 	public static BiMap<OreType, IBlockState> getOreTypeToIBlockStateMap()
 	{
-		return getTypeCollectionsRegistry().getSlaveMap(ORETYPE_TO_IBLOCKSTATE, BiMap.class);
+		if(ORETYPE_TO_IBLOCKSTATE_MAP != null)
+			return ORETYPE_TO_IBLOCKSTATE_MAP;
+		BiMap<OreType, IBlockState> map = getTypeCollectionsRegistry().getSlaveMap(ORETYPE_TO_IBLOCKSTATE, BiMap.class);
+		return map == null ? HashBiMap.<OreType, IBlockState> create() : (ORETYPE_TO_IBLOCKSTATE_MAP = map);
 	}
 	
 	public static ObjectIntIdentityMap<OreType> getOreTypeIDMap()
 	{
 		if(ORETYPE_TO_ID_MAP != null)
 			return ORETYPE_TO_ID_MAP;
-		ORETYPE_TO_ID_MAP = getTypeCollectionsRegistry().getSlaveMap(ORETYPE_TO_ID, ObjectIntIdentityMap.class);
-		if(ORETYPE_TO_ID_MAP != null)
-			return ORETYPE_TO_ID_MAP;
-		return new ObjectIntIdentityMap();
+		ObjectIntIdentityMap<OreType> map = getTypeCollectionsRegistry().getSlaveMap(ORETYPE_TO_ID, ObjectIntIdentityMap.class);
+		return map == null ? new ObjectIntIdentityMap() : (ORETYPE_TO_ID_MAP = map);
 	}
 	
 	public static void registerMaterialSmeltingRecipe(OreMaterial material, ItemStack ingot, float xp, boolean registerItem)
@@ -136,22 +135,22 @@ public class OreUtils
 	public static boolean generateOres(World world, BlockPos pos, Random random, int blocks, OreProperties properties)
 	{
 		float f = random.nextFloat() * (float)Math.PI;
-		double d0 = (double)((float)(pos.getX() + 8) + MathHelper.sin(f) * (float)blocks / 8.0F);
-		double d1 = (double)((float)(pos.getX() + 8) - MathHelper.sin(f) * (float)blocks / 8.0F);
-		double d2 = (double)((float)(pos.getZ() + 8) + MathHelper.cos(f) * (float)blocks / 8.0F);
-		double d3 = (double)((float)(pos.getZ() + 8) - MathHelper.cos(f) * (float)blocks / 8.0F);
-		double d4 = (double)(pos.getY() + random.nextInt(3) - 2);
-		double d5 = (double)(pos.getY() + random.nextInt(3) - 2);
+		double d0 = pos.getX() + 8 + MathHelper.sin(f) * blocks / 8.0F;
+		double d1 = pos.getX() + 8 - MathHelper.sin(f) * blocks / 8.0F;
+		double d2 = pos.getZ() + 8 + MathHelper.cos(f) * blocks / 8.0F;
+		double d3 = pos.getZ() + 8 - MathHelper.cos(f) * blocks / 8.0F;
+		double d4 = pos.getY() + random.nextInt(3) - 2;
+		double d5 = pos.getY() + random.nextInt(3) - 2;
 		
 		for(int i = 0; i < blocks; ++i)
 		{
 			float f1 = (float)i / (float)blocks;
-			double d6 = d0 + (d1 - d0) * (double)f1;
-			double d7 = d4 + (d5 - d4) * (double)f1;
-			double d8 = d2 + (d3 - d2) * (double)f1;
-			double d9 = random.nextDouble() * (double)blocks / 16.0D;
-			double d10 = (double)(MathHelper.sin((float)Math.PI * f1) + 1.0F) * d9 + 1.0D;
-			double d11 = (double)(MathHelper.sin((float)Math.PI * f1) + 1.0F) * d9 + 1.0D;
+			double d6 = d0 + (d1 - d0) * f1;
+			double d7 = d4 + (d5 - d4) * f1;
+			double d8 = d2 + (d3 - d2) * f1;
+			double d9 = random.nextDouble() * blocks / 16.0D;
+			double d10 = (MathHelper.sin((float)Math.PI * f1) + 1.0F) * d9 + 1.0D;
+			double d11 = (MathHelper.sin((float)Math.PI * f1) + 1.0F) * d9 + 1.0D;
 			int j = MathHelper.floor(d6 - d10 / 2.0D);
 			int k = MathHelper.floor(d7 - d11 / 2.0D);
 			int l = MathHelper.floor(d8 - d10 / 2.0D);
@@ -161,19 +160,19 @@ public class OreUtils
 			
 			for(int l1 = j; l1 <= i1; ++l1)
 			{
-				double d12 = ((double)l1 + 0.5D - d6) / (d10 / 2.0D);
+				double d12 = (l1 + 0.5D - d6) / (d10 / 2.0D);
 				
 				if(d12 * d12 < 1.0D)
 				{
 					for(int i2 = k; i2 <= j1; ++i2)
 					{
-						double d13 = ((double)i2 + 0.5D - d7) / (d11 / 2.0D);
+						double d13 = (i2 + 0.5D - d7) / (d11 / 2.0D);
 						
 						if(d12 * d12 + d13 * d13 < 1.0D)
 						{
 							for(int j2 = l; j2 <= k1; ++j2)
 							{
-								double d14 = ((double)j2 + 0.5D - d8) / (d10 / 2.0D);
+								double d14 = (j2 + 0.5D - d8) / (d10 / 2.0D);
 								
 								if(d12 * d12 + d13 * d13 + d14 * d14 < 1.0D)
 								{
