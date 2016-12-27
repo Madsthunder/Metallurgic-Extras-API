@@ -4,13 +4,13 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Random;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
@@ -19,6 +19,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.client.model.IModel;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.event.terraingen.OreGenEvent.GenerateMinable;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraftforge.fml.common.registry.GameRegistry;
 import net.minecraftforge.fml.common.registry.IForgeRegistryEntry;
 import net.minecraftforge.fml.relauncher.Side;
@@ -34,32 +35,38 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 	
 	public abstract int getHarvestLevel();
 	
-	public abstract Item getDrop();
-	
-	public abstract int getDropCount(Random random);
-	
-	public abstract int getDropCountWithFortune(int fortune, Random random);
-	
-	public abstract int getDropMeta();
-	
-	public abstract int getDropXP(Random random);
-	
 	@Nullable
 	public abstract String getLanguageKey();
 	
-	@Nonnull
-	public BlockOre generateBlock(OreTypes types)
+	public final BlockOre getBlock(OreTypes types)
 	{
 		if(this.blocks.containsKey(types))
 			return this.blocks.get(types);
-		BlockOre block = new BlockOre(this, types);
+		BlockOre block = this.createBlock(types);
+		if(ForgeRegistries.BLOCKS.containsKey(block.getRegistryName()))
+		{
+			Block block1 = ForgeRegistries.BLOCKS.getValue(block.getRegistryName());
+			if(block1 instanceof BlockOre)
+				block = (BlockOre)block1;
+			else
+				throw new IllegalStateException("There Is Already A Block \"" + block.getRegistryName() + "\" Registered That Doesn't Extend BlockOre.");
+		}
 		this.blocks.put(types, block);
 		return block;
 	}
 	
-	@Nonnull
+	public Iterable<BlockOre> getBlocksToRegister(OreTypes types)
+	{
+		return Sets.newHashSet(this.createBlock(types));
+	}
+	
+	public abstract BlockOre createBlock(OreTypes types);
+	
 	public Collection<BlockOre> getBlocks()
 	{
+		for(OreTypes types : OreUtils.getTypeCollectionsRegistry())
+			if(!this.blocks.containsKey(types))
+				this.getBlock(types);
 		return Sets.newHashSet(this.blocks.values());
 	}
 	
@@ -68,7 +75,7 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 	{
 		for(BlockOre ore : this.blocks.values())
 			if(ore.getOreTypeProperty().getTypes().hasOreType(type))
-				return ore.withOreType(type);
+				return ore.getBlockState(type);
 		return null;
 	}
 	
@@ -100,7 +107,27 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 		return "OreMaterial{" + this.getRegistryName() + "}";
 	}
 	
-	public static class Impl extends OreMaterial
+	public static abstract class Impl extends OreMaterial
+	{
+		public abstract Item getDrop();
+		
+		public abstract int getDropMeta();
+		
+		public abstract int getDropCount(Random random);
+		
+		public abstract int getDropCountWithFortune(int fortune, Random random);
+		
+		public abstract int getDropXP(Random random);
+		
+		@Override
+		public BlockOre createBlock(OreTypes types)
+		{
+			return new BlockOre.SimpleImpl(this, types);
+		}
+		
+	}
+	
+	public static class SimpleImpl extends Impl
 	{
 		private final OreProperties properties;
 		private int harvestLevel = 0;
@@ -117,38 +144,40 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 		private Collection<GenerateMinable.EventType> overrides = Sets.newHashSet();
 		private CreativeTabs tab = null;
 		
-		public Impl(OreProperties properties)
+		public SimpleImpl(OreProperties properties)
 		{
 			this.properties = properties;
 		}
 		
-		public Impl(Function<OreMaterial, OreProperties> materialToProperties)
+		public SimpleImpl(Function<OreMaterial, OreProperties> materialToProperties)
 		{
 			this.properties = materialToProperties.apply(this);
 		}
 		
+		@Override
 		public OreProperties getOreProperties()
 		{
 			return this.properties;
 		}
 		
-		public OreMaterial.Impl setHarvestLevel(int harvestLevel)
+		public OreMaterial.SimpleImpl setHarvestLevel(int harvestLevel)
 		{
 			this.harvestLevel = harvestLevel;
 			return this;
 		}
 		
+		@Override
 		public int getHarvestLevel()
 		{
 			return this.harvestLevel;
 		}
 		
-		public OreMaterial.Impl setItemDroppedAsOre()
+		public OreMaterial.SimpleImpl setItemDroppedAsOre()
 		{
 			return this.setItemDropped(ORE, -1, 0, 0);
 		}
 		
-		public OreMaterial.Impl setItemDropped(Item item, int meta, int xpMin, int xpMax)
+		public OreMaterial.SimpleImpl setItemDropped(Item item, int meta, int xpMin, int xpMax)
 		{
 			this.drop = item;
 			this.dropMeta = meta;
@@ -169,7 +198,13 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 			return this.dropMeta;
 		}
 		
-		public OreMaterial.Impl setDropCountRange(int min, int max)
+		@Override
+		public int getDropXP(Random random)
+		{
+			return MathHelper.getInt(random, this.xpMin, this.xpMax);
+		}
+		
+		public OreMaterial.SimpleImpl setDropCountRange(int min, int max)
 		{
 			this.dropMin = min;
 			this.dropMax = max;
@@ -182,7 +217,7 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 			return this.dropMin >= this.dropMax ? this.dropMin : this.dropMin + random.nextInt(this.dropMax - this.dropMin + 1);
 		}
 		
-		public OreMaterial.Impl setFortuneAdditive(int fortuneAdditive)
+		public OreMaterial.SimpleImpl setFortuneAdditive(int fortuneAdditive)
 		{
 			this.fortuneAdditive = fortuneAdditive;
 			return this;
@@ -197,18 +232,12 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 			return dropCount;
 		}
 		
-		@Override
-		public int getDropXP(Random random)
-		{
-			return MathHelper.getInt(random, this.xpMin, this.xpMax);
-		}
-		
-		public OreMaterial.Impl setIngot(Item item, int minXP, int maxXP)
+		public OreMaterial.SimpleImpl setIngot(Item item, int minXP, int maxXP)
 		{
 			return this.setIngot(item, minXP, maxXP);
 		}
 		
-		public OreMaterial.Impl setLanguageKey(String langKey)
+		public OreMaterial.SimpleImpl setLanguageKey(String langKey)
 		{
 			this.langKey = langKey;
 			return this;
@@ -226,25 +255,27 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 			return this;
 		}
 		
+		@Override
 		@SideOnly(Side.CLIENT)
 		public IModel getModel(OreType type)
 		{
 			return ModelLoaderRegistry.getModelOrMissing(this.model);
 		}
 		
-		public OreMaterial.Impl setModelType(ModelType type)
+		public OreMaterial.SimpleImpl setModelType(ModelType type)
 		{
 			this.modelType = type;
 			return this;
 		}
 		
+		@Override
 		@SideOnly(Side.CLIENT)
 		public ModelType getModelType()
 		{
 			return this.modelType;
 		}
 		
-		public OreMaterial.Impl setOverrides(GenerateMinable.EventType... types)
+		public OreMaterial.SimpleImpl setOverrides(GenerateMinable.EventType... types)
 		{
 			this.overrides = Sets.newHashSet(types);
 			return this;
@@ -256,7 +287,7 @@ public abstract class OreMaterial extends IForgeRegistryEntry.Impl<OreMaterial>
 			return this.overrides;
 		}
 		
-		public OreMaterial.Impl setCreativeTab(CreativeTabs tab)
+		public OreMaterial.SimpleImpl setCreativeTab(CreativeTabs tab)
 		{
 			this.tab = tab;
 			return this;
