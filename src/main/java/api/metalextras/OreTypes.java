@@ -10,9 +10,9 @@ import net.minecraftforge.fml.common.registry.IForgeRegistryEntry;
 
 public class OreTypes implements IForgeRegistryEntry<OreTypes>, Iterable<OreType>
 {
-	private boolean locked = false;
-	private ResourceLocation registryName = null;
 	private final List<OreType> types = Lists.newArrayList();
+	private boolean locked = false;
+	private ResourceLocation registryName;
 	
 	public boolean addOreType(OreType type)
 	{
