@@ -31,7 +31,7 @@ public class OreTypeProperty implements IProperty<OreType>
 	}
 	
 	@Override
-	public List<OreType> getAllowedValues()
+	public final List<OreType> getAllowedValues()
 	{
 		return this.types.getOreTypes();
 	}
