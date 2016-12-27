@@ -8,9 +8,9 @@ import net.minecraft.world.gen.feature.WorldGenerator;
 
 public class WorldGenOre extends WorldGenerator
 {
-	private final OreProperties.Impl properties;
+	private final OreProperties.SimpleImpl properties;
 	
-	public WorldGenOre(OreProperties.Impl properties)
+	public WorldGenOre(OreProperties.SimpleImpl properties)
 	{
 		this.properties = properties;
 	}
