@@ -7,7 +7,6 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.util.ObjectIntIdentityMap;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
@@ -15,7 +14,7 @@ import net.minecraft.world.gen.feature.WorldGenerator;
 
 public abstract class OreProperties implements Predicate<IBlockState>
 {
-	public static class Impl extends OreProperties
+	public static class SimpleImpl extends OreProperties
 	{
 		private final OreMaterial material;
 		private final WorldGenerator generator;
@@ -24,21 +23,21 @@ public abstract class OreProperties implements Predicate<IBlockState>
 		private int veinSize = 0;
 		private int minHeight = 0;
 		private int maxHeight = 0;
-		private Predicate<Collection<OreTypeDictionary>> validTypes;
+		private Predicate<Collection<Characteristic>> validTypes;
 		
-		public Impl(OreMaterial material)
+		public SimpleImpl(OreMaterial material)
 		{
 			this.material = material;
 			this.generator = new WorldGenOre(this);
 		}
 		
-		public OreProperties.Impl setSpawnEnabled(boolean shouldSpawn)
+		public OreProperties.SimpleImpl setSpawnEnabled(boolean shouldSpawn)
 		{
 			this.shouldSpawn = shouldSpawn;
 			return this;
 		}
 		
-		protected OreProperties.Impl setSpawnProperties(int spawns, int maxSize, int minHeight, int maxHeight, Predicate<Collection<OreTypeDictionary>> validTypes)
+		protected OreProperties.SimpleImpl setSpawnProperties(int spawns, int maxSize, int minHeight, int maxHeight, Predicate<Collection<Characteristic>> validTypes)
 		{
 			this.spawnTries = spawns;
 			this.veinSize = maxSize;
@@ -80,7 +79,7 @@ public abstract class OreProperties implements Predicate<IBlockState>
 		@Override
 		public boolean isValid(OreType type)
 		{
-			return this.validTypes.apply(type.getOreTypeDictionaryList());
+			return this.validTypes.apply(type.getCharacteristics());
 		}
 		
 		@Override
@@ -89,8 +88,6 @@ public abstract class OreProperties implements Predicate<IBlockState>
 			return this.generator;
 		}
 	}
-	
-	private final ObjectIntIdentityMap<IBlockState> id_to_iblockstate = new ObjectIntIdentityMap();
 	
 	public abstract OreMaterial getOreMaterial();
 	
@@ -127,15 +124,6 @@ public abstract class OreProperties implements Predicate<IBlockState>
 			if(property.getTypes() == type.getTypes())
 				return block.getDefaultState().withProperty(property, type);
 		}
-		/**
-		 * int id = state.hashCode(); IBlockState state1 =
-		 * this.id_to_iblockstate.getByValue(id); if(state1 != null) return
-		 * state1; OreType type = OreUtils.getOreType(state); if(type != null) {
-		 * state1 = this.id_to_iblockstate.getByValue(id); if(state1 == null) {
-		 * state1 = this.getOreMaterial().applyBlockState(type); if(state1 !=
-		 * null) this.id_to_iblockstate.put(state1, id); } if(state1 != null)
-		 * return state1; }
-		 */
 		return state;
 	}
 	
@@ -145,10 +133,5 @@ public abstract class OreProperties implements Predicate<IBlockState>
 	public final int hashCode()
 	{
 		return this.getOreMaterial().hashCode();
-	}
-	
-	public final boolean equals(Object o)
-	{
-		return o instanceof OreProperties ? ((OreProperties)o).getOreMaterial() == this.getOreMaterial() : false;
 	}
 }
