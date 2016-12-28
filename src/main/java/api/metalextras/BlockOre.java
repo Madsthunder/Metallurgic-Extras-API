@@ -25,11 +25,13 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -44,7 +46,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
-public abstract class BlockOre extends BlockFalling
+public abstract class BlockOre extends net.minecraft.block.BlockOre
 {
 	private final OreTypeProperty property;
 	private final OreMaterial material;
@@ -56,7 +58,6 @@ public abstract class BlockOre extends BlockFalling
 	
 	public BlockOre(OreMaterial material, OreTypes types, Function<Pair<OreMaterial, OreTypes>, String> registry_name_getter)
 	{
-		super(Material.ROCK);
 		String s = registry_name_getter.apply(Pair.of(material, types));
 		if(!s.startsWith(material.getRegistryName().getResourceDomain()))
 			throw new IllegalStateException("String \"" + s + "\" (From Function \"" + registry_name_getter + "\") Doesn't Begin With CharSequence \"" + material.getRegistryName().getResourceDomain() + "\".");
@@ -169,14 +170,44 @@ public abstract class BlockOre extends BlockFalling
 	public void onBlockAdded(World world, BlockPos pos, IBlockState state)
 	{
 		if(this.getOreType(state).canFall())
-			world.scheduleUpdate(pos, this, this.tickRate(world));
+			world.scheduleUpdate(pos, this, 2);
 	}
 	
 	@Override
 	public void neighborChanged(IBlockState state, World world, BlockPos pos, Block block, BlockPos neighbor)
 	{
 		if(this.getOreType(state).canFall())
-			world.scheduleUpdate(pos, this, this.tickRate(world));
+			world.scheduleUpdate(pos, this, 2);
+	}
+	
+	@Override
+	public void updateTick(World world, BlockPos pos, IBlockState state, Random random)
+	{
+		if(this.getOreType(state).canFall() && !world.isRemote)
+			checkFallable(this, world, pos);
+	}
+	
+	protected void onStartFalling(EntityFallingBlock entity)
+	{
+		
+	}
+	
+	@Override
+	@SideOnly(Side.CLIENT)
+	public void randomDisplayTick(IBlockState state, World world, BlockPos pos, Random random)
+	{
+		if(random.nextInt(16) == 0)
+		{
+			BlockPos blockpos = pos.down();
+			
+			if(BlockFalling.canFallThrough(world.getBlockState(blockpos)))
+			{
+				double x = pos.getX() + random.nextFloat();
+				double y = pos.getY() - .05;
+				double z = pos.getZ() + random.nextFloat();
+				world.spawnParticle(EnumParticleTypes.FALLING_DUST, x, y, z, 0, 0, 0, Block.getStateId(this.getOreType(state).getState()));
+			}
+		}
 	}
 	
 	@Override
@@ -190,13 +221,6 @@ public abstract class BlockOre extends BlockFalling
 	public void onEntityCollidedWithBlock(World world, BlockPos pos, IBlockState state, Entity entity)
 	{
 		this.getOreType(state).handleEntityCollision(world, pos, state, entity);
-	}
-	
-	@Override
-	public void updateTick(World world, BlockPos pos, IBlockState state, Random random)
-	{
-		if(this.getOreType(state).canFall())
-			super.updateTick(world, pos, state, random);
 	}
 	
 	@Override
@@ -388,6 +412,32 @@ public abstract class BlockOre extends BlockFalling
 	public static Function<Pair<OreMaterial, OreTypes>, String> getDefaultRegistryNameGetter()
 	{
 		return pair -> pair.getLeft().getRegistryName().toString() + "." + pair.getRight().getRegistryName().toString().replaceFirst(":", "_");
+	}
+	
+	public static void checkFallable(BlockOre block, World world, BlockPos pos)
+	{
+		if((world.isAirBlock(pos.down()) || BlockFalling.canFallThrough(world.getBlockState(pos.down()))) && pos.getY() >= 0)
+		{
+			IBlockState state = world.getBlockState(pos);
+			if(!BlockFalling.fallInstantly && world.isAreaLoaded(pos.add(-32, -32, -32), pos.add(32, 32, 32)))
+			{
+				if(!world.isRemote)
+				{
+					EntityFallingBlock entity = new EntityFallingBlock(world, pos.getX() + .5, pos.getY(), pos.getZ() + .5, state);
+					block.onStartFalling(entity);
+					world.spawnEntity(entity);
+				}
+			}
+			else
+			{
+				world.setBlockToAir(pos);
+				BlockPos pos1 = pos.down();
+				while((world.isAirBlock(pos1) || BlockFalling.canFallThrough(world.getBlockState(pos1))) && pos1.getY() > 0)
+					pos1 = pos.down();
+				if(pos1.getY() > 0)
+					world.setBlockState(pos1.up(), state);
+			}
+		}
 	}
 	
 	public static class SimpleImpl extends BlockOre
