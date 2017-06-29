@@ -6,7 +6,7 @@ import java.util.List;
 import com.google.common.collect.Lists;
 
 import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.common.registry.IForgeRegistryEntry;
+import net.minecraftforge.registries.IForgeRegistryEntry;
 
 public class OreTypes implements IForgeRegistryEntry<OreTypes>, Iterable<OreType>
 {
@@ -74,7 +74,7 @@ public class OreTypes implements IForgeRegistryEntry<OreTypes>, Iterable<OreType
 	}
 	
 	@Override
-	public final Class<? super OreTypes> getRegistryType()
+	public final Class<OreTypes> getRegistryType()
 	{
 		return OreTypes.class;
 	}

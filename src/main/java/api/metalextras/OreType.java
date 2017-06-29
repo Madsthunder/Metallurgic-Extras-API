@@ -18,8 +18,6 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.client.model.IModel;
-import net.minecraftforge.client.model.IModelUVLock;
-import net.minecraftforge.client.model.IRetexturableModel;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.fml.relauncher.FMLLaunchHandler;
 import net.minecraftforge.fml.relauncher.Side;
@@ -207,15 +205,16 @@ public abstract class OreType implements Comparable<OreType>
 		public static IModel getModelFromTexture(ResourceLocation texture)
 		{
 			IModel missing = ModelLoaderRegistry.getMissingModel();
-			IModel model = ModelLoaderRegistry.getModelOrMissing(new ResourceLocation("minecraft:block/cube_all"));
-			if (model != missing && model instanceof IRetexturableModel)
+			IModel model = ModelLoaderRegistry.getModelOrMissing(new ResourceLocation("minecraft:block/cube_all")).uvlock(true).retexture(new ImmutableMap.Builder().put("all", texture.toString()).build());
+			return model;
+			/*if (model != missing && model instanceof IRetexturableModel)
 			{
 				if (model instanceof IModelUVLock)
 					model = ((IModelUVLock) model).uvlock(true);
 				return ((IRetexturableModel) model)
 						.retexture(new ImmutableMap.Builder().put("all", texture.toString()).build());
 			}
-			return missing;
+			return missing;*/
 		}
 	}
 }

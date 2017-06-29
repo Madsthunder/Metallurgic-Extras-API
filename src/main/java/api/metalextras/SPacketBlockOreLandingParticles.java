@@ -41,9 +41,9 @@ public class SPacketBlockOreLandingParticles implements IMessage
 	{
 		ByteBufUtils.writeUTF8String(buffer, this.material.getRegistryName().toString());
 		ByteBufUtils.writeUTF8String(buffer, this.type.getRegistryName().toString());
-		buffer.writeDouble(this.pos.xCoord);
-		buffer.writeDouble(this.pos.yCoord);
-		buffer.writeDouble(this.pos.zCoord);
+		buffer.writeDouble(this.pos.x);
+		buffer.writeDouble(this.pos.y);
+		buffer.writeDouble(this.pos.z);
 		buffer.writeInt(this.particles);
 	}
 	

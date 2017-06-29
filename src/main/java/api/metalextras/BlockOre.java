@@ -22,6 +22,7 @@ import net.minecraft.client.particle.ParticleManager;
 import net.minecraft.client.renderer.block.model.ModelRotation;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
+import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
@@ -123,7 +124,7 @@ public abstract class BlockOre extends net.minecraft.block.BlockOre
 	}
 	
 	@Override
-	public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced)
+	public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag advanced)
 	{
 		tooltip.add((this.getOreType(stack.getMetadata()).getState().getBlock().getLocalizedName()));
 	}
@@ -211,8 +212,9 @@ public abstract class BlockOre extends net.minecraft.block.BlockOre
 	}
 	
 	@Override
-	public final void getSubBlocks(Item item, CreativeTabs tab, NonNullList<ItemStack> list)
+	public final void getSubBlocks(CreativeTabs tab, NonNullList<ItemStack> list)
 	{
+	    Item item = Item.getItemFromBlock(this);
 		for(int i = 0; i < this.getOreTypeProperty().getTypes().getOreTypes().size(); i++)
 			list.add(new ItemStack(item, 1, i));
 	}
