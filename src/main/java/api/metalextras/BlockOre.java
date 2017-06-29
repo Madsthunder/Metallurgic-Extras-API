@@ -433,9 +433,9 @@ public abstract class BlockOre extends net.minecraft.block.BlockOre
 			else
 			{
 				world.setBlockToAir(pos);
-				BlockPos pos1 = pos.down();
+				BlockPos.MutableBlockPos pos1 = new BlockPos.MutableBlockPos(pos.down());
 				while((world.isAirBlock(pos1) || BlockFalling.canFallThrough(world.getBlockState(pos1))) && pos1.getY() > 0)
-					pos1 = pos.down();
+				    pos1.setY(pos1.getY() - 1);
 				if(pos1.getY() > 0)
 					world.setBlockState(pos1.up(), state);
 			}
